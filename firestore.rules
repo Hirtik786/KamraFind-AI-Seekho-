@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true);
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    // User Profile Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email'])
+        && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 255
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 20))
+        && (!('bio' in data) || (data.bio is string && data.bio.size() <= 500))
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100));
+    }
+
+    // Listing Validation
+    function isValidListing(data) {
+      return data.keys().hasAll(['id', 'title', 'type', 'area', 'university', 'rent', 'gender', 'ownerId', 'createdAt'])
+        && data.title is string && data.title.size() <= 150
+        && data.rent is number && data.rent > 0
+        && data.ownerId == request.auth.uid
+        && data.id is string && data.id.size() <= 100
+        && (data.gender == 'Boys' || data.gender == 'Girls' || data.gender == 'Any');
+    }
+
+    // --- Collections ---
+
+    match /users/{userId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create: if isSignedIn() 
+        && incoming().senderId == request.auth.uid
+        && (request.auth.uid in incoming().participants)
+        && ('conversationId' in incoming())
+        && incoming().conversationId is string;
+    }
+
+    match /conversations/{conversationId} {
+      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow create, update: if isSignedIn() 
+        && (request.auth.uid in incoming().participants)
+        && incoming().lastMessage is string;
+    }
+
+    match /contact_messages/{messageId} {
+      allow create: if true; // Allow anyone to send feedback/contact
+    }
+
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isVerified() && isValidListing(incoming()) && isValidId(listingId);
+      allow update: if isVerified() && isOwner(existing().ownerId) 
+        && isValidListing(incoming())
+        && incoming().ownerId == existing().ownerId
+        && incoming().id == existing().id;
+      allow delete: if isVerified() && isOwner(existing().ownerId);
+    }
+  }
+}

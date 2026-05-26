@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1a6b3a;
+  --color-accent: #f5a623;
+  --color-background: #f8f9fa;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Poppins:wght@400;500;600&display=swap');
+
+body {
+  background-color: var(--color-background);
+  color: #1a1a1a;
+  font-family: var(--font-sans);
+}
+
+.urdu-text {
+  font-family: 'Noto Nastaliq Urdu', serif;
+  line-height: 2;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

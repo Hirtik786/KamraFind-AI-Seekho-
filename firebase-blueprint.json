@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Listing": {
+      "title": "Listing",
+      "description": "Room or accommodation listing",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "area": { "type": "string" },
+        "university": { "type": "string" },
+        "rent": { "type": "number" },
+        "securityDeposit": { "type": "number" },
+        "gender": { "type": "string" },
+        "mealsIncluded": { "type": "boolean" },
+        "utilities": { "type": "string" },
+        "seatsAvailable": { "type": "number" },
+        "wifi": { "type": "boolean" },
+        "ac": { "type": "boolean" },
+        "description": { "type": "string" },
+        "contactName": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "moveInDate": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["id", "title", "type", "area", "university", "rent", "gender", "ownerId", "createdAt"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Message from the contact us form",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "message"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Chat session between two users",
+      "type": "object",
+      "properties": {
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "lastMessage": { "type": "string" },
+        "lastSenderId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "listingId": { "type": "string" },
+        "listingTitle": { "type": "string" },
+        "listingArea": { "type": "string" },
+        "users": { "type": "object" }
+      },
+      "required": ["participants", "lastMessage", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile documents"
+    },
+    "/listings/{listingId}": {
+      "schema": "Listing",
+      "description": "Accommodation listings"
+    },
+    "/contact_messages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "User feedback and queries"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Chat inbox items"
+    }
+  }
+}
