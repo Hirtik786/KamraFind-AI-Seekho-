@@ -1,18 +1,55 @@
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-primary: #1a6b3a;
-  --color-accent: #f5a623;
-  --color-background: #f8f9fa;
+  --color-primary: var(--primary-col);
+  --color-accent: var(--accent-col);
+  --color-background: var(--bg-main);
+  --color-card: var(--bg-card);
   --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Poppins:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&family=Poppins:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary-col: #1a6b3a;
+  --accent-col: #f5a623;
+  --bg-main: #f8f9fa;
+  --bg-card: #ffffff;
+  --bg-input: #f9fafb;
+  --border-color: #f1f5f9;
+  --text-main: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+  --shadow-color: rgba(0, 0, 0, 0.04);
+}
+
+:root.dark {
+  --primary-col: #10b981; /* Premium High-impact Aurora Mint */
+  --accent-col: #f5a623;  /* Energetic Amber Gold */
+  --bg-main: #030712;     /* Core Cyber Obsidian Pitch Black spacing */
+  --bg-card: #090f1d;     /* Deep Frosted Dark Space Slate Card */
+  --bg-input: #11192e;    /* Sophisticated recessed Input backdrop */
+  --border-color: #1e293b; /* Sleek futuristic border accent */
+  --text-main: #f8fafc;   /* Ultra-crisp Slate White body read */
+  --text-secondary: #94a3b8; /* Classic Elegant Slate Gray */
+  --text-muted: #64748b;   /* Muted Slate indicator */
+  --shadow-color: rgba(0, 0, 0, 0.65);
+}
+
+/* Intelligent global transition presets */
+* {
+  transition-property: background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  transition-duration: 300ms;
+}
 
 body {
-  background-color: var(--color-background);
-  color: #1a1a1a;
+  background-color: var(--bg-main);
+  color: var(--text-main);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 .urdu-text {
@@ -20,8 +57,10 @@ body {
   line-height: 2;
 }
 
+/* Minimal Luxury Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -30,9 +69,249 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
-  border-radius: 10px;
+  border-radius: 12px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Polished global adaptive styles for Dark Mode */
+.dark body {
+  background-color: var(--bg-main) !important;
+  background-image: 
+    radial-gradient(circle at 5% 0%, rgba(16, 185, 129, 0.07) 0%, transparent 35%),
+    radial-gradient(circle at 95% 85%, rgba(99, 102, 241, 0.05) 0%, transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.003) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.003) 1px, transparent 1px) !important;
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  background-attachment: fixed;
+}
+
+/* Override standard light panel components in dark mode dynamically */
+.dark .bg-white {
+  background-color: var(--bg-card) !important;
+}
+
+.dark .bg-white\/90 {
+  background-color: rgba(9, 15, 29, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.dark .bg-white\/80 {
+  background-color: rgba(9, 15, 29, 0.85) !important;
+  backdrop-filter: blur(14px) !important;
+}
+
+.dark .bg-white\/60 {
+  background-color: rgba(9, 15, 29, 0.65) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+.dark .bg-gray-50 {
+  background-color: var(--bg-input) !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #11192e !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: var(--bg-input) !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #11192e !important;
+}
+
+.dark .bg-violet-50 {
+  background-color: rgba(99, 102, 241, 0.06) !important;
+}
+
+/* Smart Border adaptability */
+.dark .border-gray-50,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: var(--border-color) !important;
+}
+
+.dark .border-b,
+.dark .border-t,
+.dark .border-l,
+.dark .border-r {
+  border-color: var(--border-color) !important;
+}
+
+/* Beautiful color themes in dark state */
+.dark .bg-primary\/5 {
+  background-color: rgba(16, 185, 129, 0.06) !important;
+  border-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+.dark .bg-primary\/10 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #34d399 !important;
+}
+
+.dark .text-primary {
+  color: #34d399 !important;
+}
+
+.dark .border-primary\/10 {
+  border-color: rgba(16, 185, 129, 0.18) !important;
+}
+
+.dark .hover\:bg-primary\/5:hover {
+  background-color: rgba(16, 185, 129, 0.09) !important;
+}
+
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: var(--text-main) !important;
+}
+
+.dark .text-gray-750,
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-slate-700,
+.dark .text-slate-600 {
+  color: var(--text-secondary) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-400,
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: var(--text-secondary) !important;
+}
+
+/* Input boxes in dark mode */
+.dark select,
+.dark input,
+.dark textarea {
+  background-color: var(--bg-input) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark select option {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+}
+
+/* Luxury Input Glowing effect */
+.dark select:focus,
+.dark input:focus,
+.dark textarea:focus {
+  border-color: rgba(16, 185, 129, 0.45) !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.15) !important;
+  outline: none !important;
+}
+
+/* Enhanced high-contrast shadow definitions */
+.dark .shadow-sm {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-2xl {
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.65) !important;
+}
+
+/* Chat & Panel specific adaptation style */
+.dark .bg-gray-50\/70,
+.dark .bg-gray-50\/50,
+.dark .bg-gray-50\/30,
+.dark .bg-slate-50\/50,
+.dark .bg-slate-50\/40 {
+  background-color: rgba(17, 25, 46, 0.6) !important;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+.dark ::selection {
+  background-color: rgba(16, 185, 129, 0.3);
+  color: #ffffff;
+}
+
+/* Active buttons/navigation hover style */
+.dark .hover\:bg-gray-100:hover,
+.dark .hover\:bg-slate-100:hover {
+  background-color: rgba(17, 25, 46, 0.8) !important;
+}
+
+/* Unique glowing card effects */
+.dark .group {
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1), border-color 300ms, box-shadow 300ms, background-color 300ms;
+}
+
+.dark .group:hover {
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 12px 30px -10px rgba(16, 185, 129, 0.15), 0 1px 1px 0 rgba(16, 185, 129, 0.05) !important;
+}
+
+/* Beautiful custom neon badges */
+.dark .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+}
+.dark .bg-pink-100 {
+  background-color: rgba(236, 72, 153, 0.15) !important;
+  color: #f472b6 !important;
+}
+.dark .bg-purple-100 {
+  background-color: rgba(147, 51, 234, 0.15) !important;
+  color: #c084fc !important;
+}
+.dark .bg-green-100 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+}
+
+/* Image placeholders with premium dark cyber-gradient */
+.dark .h-48.bg-gray-100 {
+  background: linear-gradient(135deg, #090f1e 0%, #051610 100%) !important;
+}
+.dark .group:hover .h-48.bg-gray-100 {
+  background: linear-gradient(135deg, #10192e 0%, #09241b 100%) !important;
+}
+.dark .h-48.bg-gray-100 .bg-white {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Custom glow effect for Verified system badges */
+.dark .verified-badge-glow {
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
+}
+
+/* Glowy ambient assistant chat bubble */
+.dark .bg-white.text-primary.border-primary\/10 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.18) !important;
+}
+
+/* Awareness orange warning adapt */
+.dark .bg-accent\/10 {
+  background-color: rgba(245, 166, 35, 0.07) !important;
+  border-color: rgba(245, 166, 35, 0.18) !important;
 }

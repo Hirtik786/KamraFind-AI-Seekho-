@@ -24,7 +24,15 @@ export interface Listing {
   moveInDate: string;
   ownerId: string;
   imageUrl?: string;
+  images?: string[];
   createdAt: number;
+  
+  // Extended UI/UX properties for advanced filters
+  rating?: number;
+  verified?: boolean;
+  furnished?: boolean;
+  attachedBath?: boolean;
+  parking?: boolean;
 }
 
 export interface ChatMessage {

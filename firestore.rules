@@ -63,7 +63,9 @@ service cloud.firestore {
     }
 
     match /messages/{messageId} {
-      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow read: if isSignedIn() && (
+        resource.data.conversationId.matches('.*' + request.auth.uid + '.*')
+      );
       allow create: if isSignedIn() 
         && incoming().senderId == request.auth.uid
         && (request.auth.uid in incoming().participants)
@@ -90,6 +92,12 @@ service cloud.firestore {
         && incoming().ownerId == existing().ownerId
         && incoming().id == existing().id;
       allow delete: if isVerified() && isOwner(existing().ownerId);
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }

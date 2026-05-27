@@ -4,12 +4,69 @@ import { Mail, Phone, MapPin, Linkedin, Github, Send, Instagram, CheckCircle2 } 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
-export default function ContactTab() {
+interface ContactTabProps {
+  lang: 'EN' | 'UR';
+}
+
+export default function ContactTab({ lang }: ContactTabProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  const t = {
+    EN: {
+      getInTouch: "Get in Touch",
+      getInTouchSub: "If you have any questions or would like to speak with us, here are the ways to contact us:",
+      meetDeveloper: "Meet the Developer",
+      developerBio: "Hello! I am Hirtik Kumar, and I built this platform to bring simplicity and ease to your university housing search.",
+      primaryEmail: "Email",
+      whatsAppPhone: "WhatsApp / Call",
+      location: "Location",
+      locationVal: "Karachi, Pakistan",
+      messageSentSuccess: "Thank You!",
+      messageSentSuccessSub: "Your message has been received properly. I will connect with you soon.",
+      sendAnotherMsg: "Send another message",
+      messageFormTitle: "Write a Message",
+      messageFormSub: "I will get back to you as soon as possible.",
+      yourName: "Your Name",
+      placeholderName: "Name",
+      emailAddress: "Email Address",
+      placeholderEmail: "email@example.com",
+      message: "Message",
+      placeholderMsg: "What would you like to say?",
+      btnSending: "SENDING...",
+      btnSend: "SAY HELLO!",
+      builtWithPassion: "Built with Passion by Hirtik Kumar",
+      genericError: "Something went wrong sending your message. Please try again."
+    },
+    UR: {
+      getInTouch: "Rabta Karein",
+      getInTouchSub: "Agar aapka koi sawaal hai ya aap hum se baat karna chahte hain, toh ye zaraaye hain:",
+      meetDeveloper: "Developer Se Milain",
+      developerBio: "Asalam-o-Alaikum! Main Hirtik Kumar hoon, aur ye platform maine aapki sahoolat ke liye banaya hai.",
+      primaryEmail: "Email",
+      whatsAppPhone: "WhatsApp / Call",
+      location: "Location",
+      locationVal: "Karachi, Pakistan",
+      messageSentSuccess: "Shukriya!",
+      messageSentSuccessSub: "Aapka message mil gaya hai. Main jald rabta karoon ga.",
+      sendAnotherMsg: "Ek aur message bhejein",
+      messageFormTitle: "Message Bhejain",
+      messageFormSub: "Main jald hi aapse rabta karoon ga.",
+      yourName: "Aapka Naam",
+      placeholderName: "Name",
+      emailAddress: "Email Address",
+      placeholderEmail: "email@example.com",
+      message: "Message",
+      placeholderMsg: "Aap kya kehna chahte hain?",
+      btnSending: "BHEJ RAHE HAIN...",
+      btnSend: "SAY HELLO!",
+      builtWithPassion: "Built with Passion by Hirtik Kumar",
+      genericError: "Kuch masla hua message bhejne mein. Dobara koshish karein."
+    }
+  }[lang];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +97,7 @@ export default function ContactTab() {
       setMessage('');
     } catch (err) {
       console.error("Contact send error:", err);
-      alert("Kuch masla hua message bhejne mein. Dobara koshish karein.");
+      alert(t.genericError);
     } finally {
       setSending(false);
     }
@@ -54,7 +111,7 @@ export default function ContactTab() {
           animate={{ opacity: 1, y: 0 }}
           className="text-5xl font-black text-gray-900 tracking-tight"
         >
-          Rabta Karein <span className="text-primary text-xl">.</span>
+          {t.getInTouch} <span className="text-primary text-xl">.</span>
         </motion.h2>
         <motion.p 
           initial={{ opacity: 0, y: 10 }}
@@ -62,7 +119,7 @@ export default function ContactTab() {
           transition={{ delay: 0.1 }}
           className="text-gray-500 font-medium text-lg max-w-xl mx-auto"
         >
-          Agar aapka koi sawaal hai ya aap hum se baat karna chahte hain, toh ye zaraaye hain:
+          {t.getInTouchSub}
         </motion.p>
       </div>
 
@@ -75,8 +132,8 @@ export default function ContactTab() {
           className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl shadow-primary/5 space-y-8"
         >
           <div className="space-y-2">
-            <h3 className="text-2xl font-black text-gray-900">Developer Se Milain</h3>
-            <p className="text-gray-500 font-medium italic">"Asalam-o-Alaikum! Main Hirtik Kumar hoon, aur ye platform maine aapki sahoolat ke liye banaya hai."</p>
+            <h3 className="text-2xl font-black text-gray-900">{t.meetDeveloper}</h3>
+            <p className="text-gray-500 font-medium italic">"{t.developerBio}"</p>
           </div>
 
           <div className="space-y-4">
@@ -85,7 +142,7 @@ export default function ContactTab() {
                 <Mail className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Email</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">{t.primaryEmail}</p>
                 <a href="mailto:karwahirtik@gmail.com" className="text-sm font-bold text-gray-700 hover:text-primary transition-colors">karwahirtik@gmail.com</a>
               </div>
             </div>
@@ -95,7 +152,7 @@ export default function ContactTab() {
                 <Phone className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">WhatsApp / Call</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">{t.whatsAppPhone}</p>
                 <p className="text-sm font-bold text-gray-700">+92 (330) 3141088</p>
               </div>
             </div>
@@ -105,8 +162,8 @@ export default function ContactTab() {
                 <MapPin className="w-6 h-6" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">Location</p>
-                <p className="text-sm font-bold text-gray-700">Karachi, Pakistan</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1">{t.location}</p>
+                <p className="text-sm font-bold text-gray-700">{t.locationVal}</p>
               </div>
             </div>
           </div>
@@ -133,65 +190,65 @@ export default function ContactTab() {
               <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-2">
                 <CheckCircle2 className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-3xl font-black">Shukriya!</h3>
-              <p className="text-white/70 font-medium italic">Aapka message mil gaya hai. Main jald rabta karoon ga.</p>
+              <h3 className="text-3xl font-black">{t.messageSentSuccess}</h3>
+              <p className="text-white/70 font-medium italic">{t.messageSentSuccessSub}</p>
               <button 
                 onClick={() => setSent(false)}
-                className="mt-4 text-[10px] font-black uppercase tracking-widest border border-white/20 px-4 py-2 rounded-xl hover:bg-white/10"
+                className="mt-4 text-[10px] font-black uppercase tracking-widest border border-white/20 px-4 py-2 rounded-xl hover:bg-white/10 hover:text-emerald-500 hover:bg-white cursor-pointer transition-all"
               >
-                Ek aur message bhejein
+                {t.sendAnotherMsg}
               </button>
             </div>
           ) : (
             <>
               <div className="space-y-1">
-                <h3 className="text-2xl font-black">Message Bhejain</h3>
-                <p className="text-white/70 text-sm">Main jald hi aapse rabta karoon ga.</p>
+                <h3 className="text-2xl font-black">{t.messageFormTitle}</h3>
+                <p className="text-white/70 text-sm">{t.messageFormSub}</p>
               </div>
 
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/60">Aapka Naam</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/60">{t.yourName}</label>
                   <input 
                     type="text" 
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Name" 
+                    placeholder={t.placeholderName} 
                     className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 placeholder:text-white/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/60">Email Address</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/60">{t.emailAddress}</label>
                   <input 
                     type="email" 
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@example.com" 
+                    placeholder={t.placeholderEmail} 
                     className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 placeholder:text-white/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-white/60">Message</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-white/60">{t.message}</label>
                   <textarea 
                     rows={4}
                     required
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Aap kya kehna chahte hain?" 
+                    placeholder={t.placeholderMsg} 
                     className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-3 placeholder:text-white/30 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-white/30 transition-all resize-none"
                   />
                 </div>
 
                 <button 
                   disabled={sending}
-                  className="w-full bg-white text-primary rounded-2xl py-4 font-black flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform active:scale-95 shadow-xl disabled:opacity-50"
+                  className="w-full bg-white text-primary rounded-2xl py-4 font-black flex items-center justify-center gap-2 hover:scale-[1.02] transition-all active:scale-95 shadow-xl disabled:opacity-50 cursor-pointer"
                 >
                   <Send className={`w-5 h-5 ${sending ? 'animate-bounce' : ''}`} />
-                  {sending ? 'BHEJ RAHE HAIN...' : 'SAY HELLO!'}
+                  {sending ? t.btnSending : t.btnSend}
                 </button>
               </form>
             </>
@@ -206,7 +263,7 @@ export default function ContactTab() {
         viewport={{ once: true }}
         className="text-center pt-8"
       >
-        <p className="text-gray-300 font-black uppercase tracking-[0.2em] text-[10px]">Built with Passion by Hirtik Kumar</p>
+        <p className="text-gray-300 font-black uppercase tracking-[0.2em] text-[10px]">{t.builtWithPassion}</p>
       </motion.div>
     </div>
   );

@@ -66,6 +66,24 @@
         "users": { "type": "object" }
       },
       "required": ["participants", "lastMessage", "updatedAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time notification alerts for users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "titleEn": { "type": "string" },
+        "textEn": { "type": "string" },
+        "titleUr": { "type": "string" },
+        "textUr": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "number" },
+        "type": { "type": "string" },
+        "relatedId": { "type": "string" }
+      },
+      "required": ["id", "userId", "titleEn", "textEn", "read", "createdAt"]
     }
   },
   "firestore": {
@@ -84,6 +102,10 @@
     "/conversations/{conversationId}": {
       "schema": "Conversation",
       "description": "Chat inbox items"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "Inbox activity alerts"
     }
   }
 }

@@ -3,15 +3,16 @@ import { GoogleGenAI } from '@google/genai';
 import { Listing, ChatMessage } from '../types';
 import { SYSTEM_PROMPT } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Bot, User, Sparkles, MapPin, School, Banknote, AlertCircle, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Sparkles, MapPin, School, Banknote, AlertCircle, Trash2, X } from 'lucide-react';
 
 interface AIAssistantTabProps {
   listings: Listing[];
   contextListing: Listing | null;
   onClearContext: () => void;
+  onClose?: () => void;
 }
 
-export default function AIAssistantTab({ listings, contextListing, onClearContext }: AIAssistantTabProps) {
+export default function AIAssistantTab({ listings, contextListing, onClearContext, onClose }: AIAssistantTabProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -135,13 +136,24 @@ Student message: ${input}
             </div>
           </div>
         </div>
-        <button 
-          onClick={clearChat}
-          className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white mt-1"
-          title="Clear Chat"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={clearChat}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white mt-1"
+            title="Clear Chat"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+          {onClose && (
+            <button 
+              onClick={onClose}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white mt-1"
+              title="Close Assistant"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Messages Area */}
