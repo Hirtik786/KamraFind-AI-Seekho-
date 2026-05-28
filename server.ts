@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { Resend } from 'resend';
 import dotenv from 'dotenv';
+import { GoogleGenAI } from '@google/genai';
 
 dotenv.config();
 
@@ -13,6 +14,109 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  // API Route for secure, fast-responsive streaming chatbot interaction
+  app.post('/api/chat', async (req, res) => {
+    const { history = [], input = '', listings = [], contextListing = null, chatLang = 'roman-urdu' } = req.body;
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    });
+
+    try {
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        res.write(`data: ${JSON.stringify({ error: 'GEMINI_API_KEY environment variable is not configured. Please add it to your Secrets.' })}\n\n`);
+        return res.end();
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const formattedListings = listings.map((l: any) => ({
+        id: l.id,
+        title: l.title,
+        rent: l.rent,
+        area: l.area,
+        university: l.university,
+        type: l.type,
+        gender: l.gender,
+        meals: l.mealsIncluded
+      }));
+
+      const contextPrompt = `
+Current listings data: ${JSON.stringify(formattedListings)}
+${contextListing ? `Special context: Student is currently looking at this listing: ${JSON.stringify(contextListing)}` : ''}
+
+Student message: ${input}
+`;
+
+      let languagePreferenceDirective = '';
+      if (chatLang === 'english') {
+        languagePreferenceDirective = 'You MUST reply ONLY in English. Do not write in Roman Urdu or Urdu script.';
+      } else if (chatLang === 'urdu') {
+        languagePreferenceDirective = 'You MUST reply ONLY in respectful Urdu script (e.g. السلام علیکم! میں آپ کی مدد کے لیے حاضر ہوں). Do not write in Roman scripts or pure English except for proper nouns.';
+      } else {
+        languagePreferenceDirective = 'You MUST reply ONLY in Roman Urdu (Urdu written with English letters, e.g. "Aap kaise hain?"). Do not use Urdu script alphabets or pure English unless responding to specific English queries.';
+      }
+
+      const systemInstruction = `You are KamraFind Assistant, a helpful room-finding guide for university students in Karachi, Pakistan.
+
+Your personality: friendly, helpful, honest, big-brother style. Keep your words highly relevant, practical, and extremely fast.
+
+Language Guidelines:
+${languagePreferenceDirective}
+
+Your job:
+1. Ask smart questions to understand what the student needs.
+2. Recommend the best matching listings from the current listings data. Include the rental price, area, and close proximity to academic hub.
+3. Suggest a couple of crucial questions to ask before paying or renting (e.g. "Water availability?", "Electrical meters?").
+4. Warn about advance scams.
+
+After your pleasant message, if matching listings are identified, append exactly:
+FILTERS_JSON:
+{"type": "Hostel"|"Sharing Flat"|"Single Room"|"Full Apartment"|"Any", "area": "Gulshan-e-Iqbal"|"PECHS"|...|"Any", "maxBudget": number, "university": "NED"|"IBA"|...|"Any", "gender": "Boys"|"Girls"|"Any", "meals": boolean}`;
+
+      const contents = [
+        ...history.map((h: any) => ({
+          role: h.role === 'user' ? 'user' : 'model',
+          parts: [{ text: h.content || '' }]
+        })),
+        {
+          role: 'user',
+          parts: [{ text: contextPrompt }]
+        }
+      ];
+
+      const stream = await ai.models.generateContentStream({
+        model: 'gemini-3.5-flash',
+        contents,
+        config: {
+          systemInstruction,
+          temperature: 0.7,
+        }
+      });
+
+      for await (const chunk of stream) {
+        if (chunk.text) {
+          res.write(`data: ${JSON.stringify({ text: chunk.text })}\n\n`);
+        }
+      }
+    } catch (err: any) {
+      console.error('Gemini stream error:', err);
+      res.write(`data: ${JSON.stringify({ error: err?.message || 'Server error occurred relative to Gemini generation stream.' })}\n\n`);
+    } finally {
+      res.end();
+    }
+  });
 
   // API Route for sending contact emails
   app.post('/api/contact', async (req, res) => {

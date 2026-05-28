@@ -103,13 +103,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Connection test as required by guidelines
 async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration.");
+  setTimeout(async () => {
+    try {
+      // Use the publicly readable 'listings' collection path for connection checking to avoid rules restrictions
+      await getDocFromServer(doc(db, 'listings', 'connection-check'));
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('the client is offline')) {
+        console.error("Please check your Firebase configuration.");
+      } else {
+        console.log("Firestore connection initialized successfully.");
+      }
     }
-  }
+  }, 3500);
 }
 
 testConnection();

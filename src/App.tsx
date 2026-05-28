@@ -700,6 +700,7 @@ export default function App() {
                 listings={listings} 
                 contextListing={aiContextListing}
                 onClearContext={() => setAiContextListing(null)}
+                lang={lang}
               />
             </motion.div>
           )}
@@ -737,6 +738,7 @@ export default function App() {
               contextListing={aiContextListing}
               onClearContext={() => setAiContextListing(null)}
               onClose={() => setIsAiOpen(false)}
+              lang={lang}
             />
           </motion.div>
         )}

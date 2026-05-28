@@ -798,6 +798,7 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
                 isCompared={compareIds.includes(listing.id)}
                 onToggleCompare={() => toggleCompare(listing.id)}
                 lang={lang}
+                filters={filters}
               />
             ))}
           </div>
@@ -927,6 +928,14 @@ interface DecoratedListingProps extends ListingCardProps {
   isCompared: boolean;
   onToggleCompare: () => void;
   lang: 'EN' | 'UR';
+  filters?: {
+    type: string;
+    area: string;
+    university: string;
+    budget: number;
+    gender: string;
+    meals: string;
+  };
 }
 
 interface ListingCardProps {
@@ -937,9 +946,10 @@ interface ListingCardProps {
 }
 
 const ListingCard: React.FC<DecoratedListingProps> = ({ 
-  listing, onAskAi, onContact, onViewProfile, onTrackVisit, matchScore, isCompared, onToggleCompare, lang 
+  listing, onAskAi, onContact, onViewProfile, onTrackVisit, matchScore, isCompared, onToggleCompare, lang, filters 
 }) => {
   const [showNumber, setShowNumber] = useState(false);
+  const [showMatchBreakdown, setShowMatchBreakdown] = useState(false);
   const [user] = useAuthState(auth);
   const [isSaved, setIsSaved] = useState(() => {
     const saved = localStorage.getItem('kamraFind_savedRoomIds');
@@ -1146,11 +1156,124 @@ const ListingCard: React.FC<DecoratedListingProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Match Percentage score representation */}
-            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 grow-0 ${getMatchScoreColor(matchScore)}`}>
-              🧬 {matchScore}% Match
-            </span>
+          <div className="flex items-center gap-2 relative">
+            {/* Match Percentage score representation with interactive animated popover */}
+            <div 
+              className="relative inline-block cursor-pointer select-none z-10"
+              onMouseEnter={() => setShowMatchBreakdown(true)}
+              onMouseLeave={() => setShowMatchBreakdown(false)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMatchBreakdown(!showMatchBreakdown);
+              }}
+            >
+              <motion.span 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-black flex items-center gap-1 grow-0 cursor-pointer ${getMatchScoreColor(matchScore)}`}
+              >
+                🧬 {matchScore}% Match
+              </motion.span>
+
+              {/* Animated Floating Match Details Breakdown */}
+              <AnimatePresence>
+                {showMatchBreakdown && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 12 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.9, y: 12 }}
+                    transition={{ type: 'spring', damping: 18, stiffness: 220 }}
+                    className="absolute bottom-full left-0 mb-3 w-72 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-gray-100 dark:border-slate-800 p-4 rounded-2xl shadow-2xl z-50 text-gray-950 dark:text-gray-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-gray-100 dark:border-slate-800">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          {lang === 'EN' ? 'Compatibility Analyzer' : 'Compatibility Jaiza'}
+                        </span>
+                        <span className="text-xs font-black text-primary dark:text-teal-400">
+                          {matchScore}% Match
+                        </span>
+                      </div>
+                      
+                      {/* Dynamic Circular dash-array progress loop */}
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0 flex items-center justify-center">
+                          <svg className="w-12 h-12 transform -rotate-90">
+                            <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="3" className="text-gray-100 dark:text-slate-850" fill="transparent" />
+                            <motion.circle 
+                              cx="24" 
+                              cy="24" 
+                              r="20" 
+                              stroke={matchScore >= 85 ? '#10b981' : matchScore >= 70 ? '#f5a623' : '#64748b'} 
+                              strokeWidth="3.2" 
+                              strokeDasharray={`${2 * Math.PI * 20}`}
+                              initial={{ strokeDashoffset: `${2 * Math.PI * 20}` }}
+                              animate={{ strokeDashoffset: `${2 * Math.PI * 20 * (1 - matchScore / 100)}` }}
+                              transition={{ duration: 0.85, ease: 'easeOut' }}
+                              fill="transparent" 
+                            />
+                          </svg>
+                          <span className="absolute text-[9px] font-black">{matchScore}%</span>
+                        </div>
+                        <p className="text-[10.5px] text-gray-500 dark:text-gray-400 leading-normal">
+                          {matchScore >= 85 
+                            ? (lang === 'EN' ? "Highly recommended match for your academic preferences!" : "Aapki preferences ke liye bilkul behtareen aur highly compatible!")
+                            : matchScore >= 70 
+                            ? (lang === 'EN' ? "Decent, balanced budget fit near academic centers." : "Acha budget matching option jo ke safe area mein hai.")
+                            : (lang === 'EN' ? "Adjust your filters to discover matching rooms nearby." : "Koshish karen filters ko adjust karke exact partner dhondhein.")}
+                        </p>
+                      </div>
+
+                      {/* Staggered progress breakdown meters */}
+                      <div className="space-y-1.5 pt-1.5 border-t border-gray-100 dark:border-slate-800">
+                        {[
+                          {
+                            title: lang === 'EN' ? 'Type Match' : 'Kamray Ki Kisaam',
+                            val: listing.type,
+                            match: !filters || filters.type === 'Any' || listing.type === filters.type
+                          },
+                          {
+                            title: lang === 'EN' ? 'Locality / Area' : 'Area / Jagah',
+                            val: listing.area,
+                            match: !filters || filters.area === 'Any' || listing.area === filters.area
+                          },
+                          {
+                            title: lang === 'EN' ? 'Uni Proximity' : 'University Qurbat',
+                            val: listing.university,
+                            match: !filters || filters.university === 'Any' || listing.university === filters.university
+                          },
+                          {
+                            title: lang === 'EN' ? 'Gender Standard' : 'Gender Ki Shart',
+                            val: listing.gender === 'Any' ? 'Family/Any' : listing.gender,
+                            match: !filters || filters.gender === 'Any' || listing.gender === filters.gender
+                          },
+                          {
+                            title: lang === 'EN' ? 'Rent vs Budget' : 'Kiraya Budget Limit',
+                            val: `Rs. ${listing.rent.toLocaleString()}`,
+                            match: !filters || listing.rent <= filters.budget
+                          }
+                        ].map((b, bIdx) => (
+                          <div key={bIdx} className="text-[10.5px] flex items-center justify-between gap-1.5">
+                            <span className="text-gray-500 dark:text-gray-450 truncate max-w-[120px]">{b.title}</span>
+                            <div className="flex items-center gap-1 overflow-hidden">
+                              <span className={`text-[10px] font-semibold truncate max-w-[90px] ${b.match ? 'text-gray-800 dark:text-gray-200' : 'text-gray-400 dark:text-gray-550'}`}>
+                                {b.val}
+                              </span>
+                              {b.match ? (
+                                <span className="text-emerald-500 font-extrabold" title="Verified Match">✓</span>
+                              ) : (
+                                <span className="text-amber-500 font-extrabold" title="Filter mismatch">⚠</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             {listing.furnished && (
               <span className="px-2.5 py-1 bg-gray-100 dark:bg-slate-800 text-gray-400 rounded-lg text-[9px] font-bold uppercase">
                 Furnished
