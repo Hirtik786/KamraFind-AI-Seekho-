@@ -47,6 +47,11 @@ export default function ProfileTab({ listings, lang }: ProfileTabProps) {
   const [editPhone, setEditPhone] = useState('');
   const [editBio, setEditBio] = useState('');
 
+  // Custom Delete Confirmation states
+  const [deletingListingId, setDeletingListingId] = useState<string | null>(null);
+  const [deletingSubmitting, setDeletingSubmitting] = useState(false);
+  const [deleteDone, setDeleteDone] = useState(false);
+
   const t = {
     EN: {
       notLoggedInTitle: "You are not logged in",
@@ -191,13 +196,26 @@ export default function ProfileTab({ listings, lang }: ProfileTabProps) {
     }
   };
 
-  const handleDeleteListing = async (id: string) => {
-    if (window.confirm(t.deleteConfirm)) {
-      try {
-        await deleteDoc(doc(db, 'listings', id));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `listings/${id}`);
-      }
+  const handleDeleteListing = (id: string) => {
+    setDeletingListingId(id);
+    setDeleteDone(false);
+  };
+
+  const executeDeleteListing = async () => {
+    if (!deletingListingId) return;
+    setDeletingSubmitting(true);
+    try {
+      await deleteDoc(doc(db, 'listings', deletingListingId));
+      setDeleteDone(true);
+      setTimeout(() => {
+        setDeletingListingId(null);
+        setDeleteDone(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Profile deletion error:", err);
+      handleFirestoreError(err, OperationType.DELETE, `listings/${deletingListingId}`);
+    } finally {
+      setDeletingSubmitting(false);
     }
   };
 
@@ -488,6 +506,83 @@ export default function ProfileTab({ listings, lang }: ProfileTabProps) {
                    </div>
                 </div>
              </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Delete Confirmation Modal in ProfileTab */}
+      <AnimatePresence>
+        {deletingListingId && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { if (!deletingSubmitting) setDeletingListingId(null); }}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 p-6 md:p-8 text-center z-10"
+            >
+              {!deleteDone ? (
+                <div className="space-y-6">
+                  <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
+                    <Trash2 className="w-7 h-7" />
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-black text-gray-950 dark:text-white">
+                      {lang === 'EN' ? 'Confirm Deletion' : 'Khaatme ki tasdeeq'}
+                    </h3>
+                    <p className="text-xs text-gray-550 dark:text-gray-400 leading-relaxed">
+                      {lang === 'EN' 
+                        ? 'Are you absolutely sure you want to delete this room listing? This action cannot be reverted.'
+                        : 'Kya aap is room listing ko permanently khatam karna chahte hain? Dubara wapas nahi laya ja sakega.'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <button
+                      type="button"
+                      disabled={deletingSubmitting}
+                      onClick={() => setDeletingListingId(null)}
+                      className="py-3 bg-gray-100 hover:bg-gray-200 dark:bg-slate-850 dark:hover:bg-slate-750 text-gray-800 dark:text-slate-200 text-xs font-extrabold rounded-xl transition-all cursor-pointer"
+                    >
+                      {lang === 'EN' ? 'Cancel' : 'Radd Karen'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingSubmitting}
+                      onClick={executeDeleteListing}
+                      className="py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-lg shadow-rose-600/10 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {deletingSubmitting ? (
+                        <span>Deleting...</span>
+                      ) : (
+                        <span>{lang === 'EN' ? 'Delete Room' : 'Khatam Karen'}</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 space-y-4">
+                  <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-7 h-7" strokeWidth={3} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-gray-900 dark:text-white">
+                      {lang === 'EN' ? 'Listing Deleted' : 'Listing khatam ho gayi'}
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Successfully removed from KamraFind.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

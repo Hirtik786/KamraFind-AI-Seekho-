@@ -5,7 +5,7 @@ import {
   Plus, Check, Bookmark, ChevronDown, ChevronLeft, ChevronRight, Map, List, MessageCircle, AlertCircle, X, Sparkles 
 } from 'lucide-react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { deleteDoc, doc } from 'firebase/firestore';
+import { deleteDoc, doc, collection, addDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { Listing, AccommodationType, GenderPreference } from '../types';
 import { KARACHI_AREAS, UNIVERSITIES } from '../constants';
@@ -15,6 +15,7 @@ import PublicProfileModal from './PublicProfileModal';
 import CompareModal from './CompareModal';
 import KarachiMap from './KarachiMap';
 import RecentlyViewed from './RecentlyViewed';
+import ListingDetailModal from './ListingDetailModal';
 
 interface DhondhoTabProps {
   listings: Listing[];
@@ -182,6 +183,20 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
 
   // 5. Recently Viewed room IDs (read/write from localStorage)
   const [recentlyViewed, setRecentlyViewed] = useState<Listing[]>([]);
+
+  // 14. Full Details Popup states
+  const [selectedDetailedListing, setSelectedDetailedListing] = useState<Listing | null>(null);
+
+  // 15. Premium Custom Report & Delete overlay states
+  const [reportingListing, setReportingListing] = useState<Listing | null>(null);
+  const [reportReason, setReportReason] = useState<string>('Scam / Fake Listing');
+  const [reportDetails, setReportDetails] = useState<string>('');
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [reportingSubmitting, setReportingSubmitting] = useState(false);
+
+  const [deletingListing, setDeletingListing] = useState<Listing | null>(null);
+  const [deletingSubmitting, setDeletingSubmitting] = useState(false);
+  const [deleteDone, setDeleteDone] = useState(false);
 
   // 8. Saved Searches states
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
@@ -389,6 +404,45 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
         return;
       }
       setCompareIds([...compareIds, id]);
+    }
+  };
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportingListing) return;
+    setReportingSubmitting(true);
+    try {
+      await addDoc(collection(db, 'contact_messages'), {
+        name: user?.displayName || 'Anonymous Reporter',
+        email: user?.email || 'anonymous-reporter@dhondho.pk',
+        message: `[ROOM REPORT] ID: ${reportingListing.id} | Title: ${reportingListing.title} | Reason: ${reportReason} | Details: ${reportDetails || 'None provided'}`,
+        createdAt: new Date().toISOString()
+      });
+      setReportSubmitted(true);
+    } catch (err) {
+      console.error("Error reporting listing:", err);
+      alert("Report submit karte waqt masla hua. Please try again.");
+    } finally {
+      setReportingSubmitting(false);
+    }
+  };
+
+  const handleDeleteSubmit = async () => {
+    if (!deletingListing) return;
+    setDeletingSubmitting(true);
+    try {
+      await deleteDoc(doc(db, 'listings', deletingListing.id));
+      setDeleteDone(true);
+      setTimeout(() => {
+        setDeletingListing(null);
+        setDeleteDone(false);
+        setSelectedDetailedListing(null);
+      }, 1500);
+    } catch (err) {
+      console.error("Error deleting listing:", err);
+      handleFirestoreError(err, OperationType.DELETE, `listings/${deletingListing.id}`);
+    } finally {
+      setDeletingSubmitting(false);
     }
   };
 
@@ -671,7 +725,7 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
           listings={recentlyViewed} 
           onSelect={(l) => {
             trackRecentViewing(l);
-            onAskAi(l);
+            setSelectedDetailedListing(l);
           }} 
           lang={lang} 
         />
@@ -781,6 +835,10 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
           selectedArea={filters.area} 
           onSelectArea={(area) => setFilters({ ...filters, area })} 
           lang={lang} 
+          onViewDetails={(listing) => {
+            trackRecentViewing(listing);
+            setSelectedDetailedListing(listing);
+          }}
         />
       ) : (
         /* Grid list */
@@ -799,6 +857,17 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
                 onToggleCompare={() => toggleCompare(listing.id)}
                 lang={lang}
                 filters={filters}
+                onViewDetails={() => {
+                  trackRecentViewing(listing);
+                  setSelectedDetailedListing(listing);
+                }}
+                onDeleteListing={() => setDeletingListing(listing)}
+                onReportListing={() => {
+                  setReportingListing(listing);
+                  setReportReason('Scam / Fake Listing');
+                  setReportDetails('');
+                  setReportSubmitted(false);
+                }}
               />
             ))}
           </div>
@@ -917,6 +986,238 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
           userId={viewingProfileId}
         />
       )}
+
+      {/* Listing Detail Modal Popup */}
+      {selectedDetailedListing && (
+        <ListingDetailModal
+          isOpen={!!selectedDetailedListing}
+          onClose={() => setSelectedDetailedListing(null)}
+          listing={selectedDetailedListing}
+          onAskAi={(listing) => {
+            onAskAi(listing);
+            setSelectedDetailedListing(null);
+          }}
+          onContact={(listing) => {
+            handleContact(listing);
+          }}
+          onViewProfile={(id) => {
+            setViewingProfileId(id);
+            setSelectedDetailedListing(null);
+          }}
+          lang={lang}
+          matchScore={getMatchScore(selectedDetailedListing)}
+          currentUserUid={user?.uid}
+          onDelete={(listing) => setDeletingListing(listing)}
+          onReport={(listing) => {
+            setReportingListing(listing);
+            setReportReason('Scam / Fake Listing');
+            setReportDetails('');
+            setReportSubmitted(false);
+          }}
+        />
+      )}
+
+      {/* 16. Custom Report Modal */}
+      <AnimatePresence>
+        {reportingListing && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setReportingListing(null)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs animate-none"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 p-6 md:p-8 text-left z-10"
+            >
+              <button 
+                onClick={() => setReportingListing(null)} 
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {!reportSubmitted ? (
+                <form onSubmit={handleReportSubmit} className="space-y-5">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Report Listing</span>
+                    <h3 className="text-xl font-black text-gray-950 dark:text-white leading-tight">
+                      {lang === 'EN' ? 'Is there something wrong?' : 'Kya is listing mein masla hai?'}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {lang === 'EN' ? 'Help us keep Karachi rooms safe. Choose a reason below:' : 'Karachi ke kamron ko safe rakhne mein madad karen:'}
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {[
+                      { reason: 'Scam / Fake Listing', ur: 'Scam ya Jhooti Post' },
+                      { reason: 'Inaccurate Price / Info', ur: 'Galat Rent ya Info' },
+                      { reason: 'Already Rented / Unavailable', ur: 'Pehle se rent ho chuka hai' },
+                      { reason: 'Inappropriate Contact Person', ur: 'Ghair ikhlaqi bartao' },
+                      { reason: 'Other Issue', ur: 'Koi aur masla' }
+                    ].map((item) => (
+                      <label 
+                        key={item.reason} 
+                        className={`flex items-start gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                          reportReason === item.reason 
+                            ? 'bg-primary/5 dark:bg-emerald-500/5 border-primary/25 dark:border-emerald-500/30' 
+                            : 'bg-gray-50 dark:bg-slate-850/50 border-transparent hover:border-gray-200 dark:hover:border-slate-850'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="report_reason"
+                          value={item.reason}
+                          checked={reportReason === item.reason}
+                          onChange={(e) => setReportReason(e.target.value)}
+                          className="mt-1 accent-primary"
+                        />
+                        <div>
+                          <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                            {lang === 'EN' ? item.reason : item.ur}
+                          </p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {lang === 'EN' ? 'Additional Details (Optional)' : 'mazeed tafseelat (Ikhteyari)'}
+                    </label>
+                    <textarea
+                      value={reportDetails}
+                      onChange={(e) => setReportDetails(e.target.value)}
+                      placeholder={lang === 'EN' ? "e.g., landlord is asking for Rs.5000 advance without showing the room." : "Misaal ke tor par: landlord bina kamra dikhaye advance maang raha hai."}
+                      rows={3}
+                      className="w-full bg-gray-50 dark:bg-slate-850 border-2 border-transparent focus:border-primary/20 rounded-xl px-4 py-3 text-xs font-semibold focus:bg-white dark:focus:bg-slate-900 outline-none transition-all resize-none text-gray-800 dark:text-gray-200"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={reportingSubmitting}
+                    className="w-full py-3 px-4 bg-primary hover:bg-indigo-650 text-white font-bold text-xs rounded-xl shadow-lg hover:shadow-primary/20 disabled:opacity-50 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {reportingSubmitting ? (
+                      <span>Submitting...</span>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4" />
+                        <span>{lang === 'EN' ? 'Submit Report' : 'Report Submit Karen'}</span>
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <div className="py-8 text-center space-y-4">
+                  <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-8 h-8" strokeWidth={3} />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                      {lang === 'EN' ? 'Report Submitted!' : 'Report Chali Gayi!'}
+                    </h3>
+                    <p className="text-xs text-gray-500 leading-relaxed max-w-xs mx-auto">
+                      {lang === 'EN' 
+                        ? 'Thank you. Our safety system and administration team have received your report and are investigating.'
+                        : 'Shukriya. Humara safety system aur staff is report ka jaiza lekar is listing ko jald verify karega.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setReportingListing(null)}
+                    className="px-6 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-750 text-xs font-bold rounded-lg cursor-pointer transition-all text-gray-700 dark:text-gray-300"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 17. Custom Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deletingListing && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { if (!deletingSubmitting) setDeletingListing(null); }}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 15 }}
+              className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-2xl border border-gray-100 dark:border-slate-800 p-6 md:p-8 text-center z-10"
+            >
+              {!deleteDone ? (
+                <div className="space-y-6">
+                  <div className="w-14 h-14 bg-rose-50 dark:bg-rose-950/20 text-rose-500 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
+                    <Trash2 className="w-7 h-7" />
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                      {lang === 'EN' ? 'Confirm Deletion' : 'Khaatme ki tasdeeq'}
+                    </h3>
+                    <p className="text-xs text-gray-550 dark:text-gray-400 leading-relaxed">
+                      {lang === 'EN' 
+                        ? 'Are you absolutely sure you want to delete this room listing? This action cannot be reverted.'
+                        : 'Kya aap is room listing ko permanently khatam karna chahte hain? Dubara wapas nahi laya ja sakega.'}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3.5">
+                    <button
+                      type="button"
+                      disabled={deletingSubmitting}
+                      onClick={() => setDeletingListing(null)}
+                      className="py-3 bg-gray-100 hover:bg-gray-250 dark:bg-slate-800 dark:hover:bg-slate-750 text-gray-800 dark:text-slate-200 text-xs font-extrabold rounded-xl transition-all cursor-pointer"
+                    >
+                      {lang === 'EN' ? 'Cancel' : 'Radd Karen'}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={deletingSubmitting}
+                      onClick={handleDeleteSubmit}
+                      className="py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-black rounded-xl shadow-lg shadow-rose-600/10 transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      {deletingSubmitting ? (
+                        <span>Deleting...</span>
+                      ) : (
+                        <span>{lang === 'EN' ? 'Delete Room' : 'Khatam Karen'}</span>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-6 space-y-4">
+                  <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
+                    <Check className="w-7 h-7" strokeWidth={3} />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="text-base font-black text-gray-900 dark:text-white">
+                      {lang === 'EN' ? 'Listing Deleted' : 'Listing khatam ho gayi'}
+                    </h3>
+                    <p className="text-xs text-gray-400">
+                      Successfully removed from KamraFind.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -943,10 +1244,14 @@ interface ListingCardProps {
   onAskAi: () => void;
   onContact: () => void;
   onViewProfile: (id: string) => void;
+  onViewDetails: () => void;
+  onDeleteListing?: () => void;
+  onReportListing?: () => void;
 }
 
 const ListingCard: React.FC<DecoratedListingProps> = ({ 
-  listing, onAskAi, onContact, onViewProfile, onTrackVisit, matchScore, isCompared, onToggleCompare, lang, filters 
+  listing, onAskAi, onContact, onViewProfile, onTrackVisit, matchScore, isCompared, onToggleCompare, lang, filters, onViewDetails,
+  onDeleteListing, onReportListing
 }) => {
   const [showNumber, setShowNumber] = useState(false);
   const [showMatchBreakdown, setShowMatchBreakdown] = useState(false);
@@ -1011,14 +1316,8 @@ const ListingCard: React.FC<DecoratedListingProps> = ({
     localStorage.setItem('kamraFind_savedRoomIds', JSON.stringify(ids));
   };
 
-  const handleDelete = async () => {
-    if (window.confirm("Aap ye listing khatam karna chahte hain?")) {
-      try {
-        await deleteDoc(doc(db, 'listings', listing.id));
-      } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `listings/${listing.id}`);
-      }
-    }
+  const handleDelete = () => {
+    onDeleteListing?.();
   };
 
   const getMatchScoreColor = (score: number) => {
@@ -1030,8 +1329,8 @@ const ListingCard: React.FC<DecoratedListingProps> = ({
   return (
     <motion.div 
       whileHover={{ y: -4 }}
-      onClick={onTrackVisit}
-      className="bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl border border-gray-100 dark:border-gray-800 flex flex-col h-full group relatvive"
+      onClick={() => { onTrackVisit(); onViewDetails(); }}
+      className="bg-white dark:bg-slate-900 rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl border border-gray-100 dark:border-gray-800 flex flex-col h-full group relative cursor-pointer"
     >
       {/* 1. Image Area with dynamic tag markers */}
       <div className="h-48 relative overflow-hidden flex items-center justify-center text-gray-400 group/img">
@@ -1330,7 +1629,10 @@ const ListingCard: React.FC<DecoratedListingProps> = ({
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            <button className="text-[9px] text-gray-400 hover:text-red-500 transition-colors uppercase font-black tracking-widest flex items-center gap-1">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onReportListing?.(); }}
+              className="text-[9px] text-gray-400 hover:text-red-500 transition-colors uppercase font-black tracking-widest flex items-center gap-1 cursor-pointer"
+            >
               <Info className="w-3 h-3" /> Report
             </button>
 

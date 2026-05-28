@@ -27,6 +27,7 @@ interface KarachiMapProps {
   selectedArea: string;
   onSelectArea: (area: string) => void;
   lang: 'EN' | 'UR';
+  onViewDetails?: (listing: Listing) => void;
 }
 
 interface AreaCoord {
@@ -79,7 +80,7 @@ const API_KEY =
 
 const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY' && API_KEY.trim() !== '';
 
-export default function KarachiMap({ listings, selectedArea, onSelectArea, lang }: KarachiMapProps) {
+export default function KarachiMap({ listings, selectedArea, onSelectArea, lang, onViewDetails }: KarachiMapProps) {
   const [activeListing, setActiveListing] = useState<Listing | null>(null);
   const [showUniversities, setShowUniversities] = useState(true);
   const [mapCenter, setMapCenter] = useState({ lat: 24.8900, lng: 67.0600 }); // Karachi Center
@@ -319,16 +320,23 @@ export default function KarachiMap({ listings, selectedArea, onSelectArea, lang 
                         {activeListing.wifi && <span className="bg-gray-100 px-1.5 py-0.5 rounded">⚡ WIFI</span>}
                       </div>
 
-                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between gap-1.5">
                         <a 
                           href={`https://wa.me/${activeListing.whatsappNumber}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center justify-center gap-1.5 grow bg-emerald-500 hover:bg-emerald-600 font-extrabold text-[10px] text-white py-1.5 rounded-xl transition-all shadow-sm"
+                          className="flex items-center justify-center gap-1 bg-emerald-500 hover:bg-emerald-600 font-extrabold text-[9px] text-white px-2 py-1.5 rounded-xl transition-all shadow-sm w-1/2 text-center"
                         >
-                          <Phone className="w-3 h-3" />
-                          {t.whatsapp}
+                          <Phone className="w-2.5 h-2.5" />
+                          WhatsApp
                         </a>
+                        <button 
+                          onClick={() => onViewDetails?.(activeListing)}
+                          className="flex items-center justify-center gap-1 bg-primary hover:bg-indigo-700 font-extrabold text-[9px] text-white px-2 py-1.5 rounded-xl transition-all shadow-sm w-1/2 cursor-pointer text-center"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          {lang === 'EN' ? 'Details' : 'تفصیلات'}
+                        </button>
                       </div>
                     </div>
                   </InfoWindow>
@@ -402,14 +410,19 @@ export default function KarachiMap({ listings, selectedArea, onSelectArea, lang 
                         </div>
                         <p className="text-[10px] text-gray-400 font-semibold truncate">🎓 {l.university}</p>
                         
-                        <div className="flex items-center justify-between pt-1 gap-1">
+                        <div className="flex items-center justify-between pt-1.5 gap-1 border-t border-gray-100 dark:border-slate-800/65 mt-1">
                           <span className="text-[8.5px] font-black uppercase text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
                             {l.type}
                           </span>
-                          <span className="text-[9px] font-bold text-emerald-500 flex items-center gap-0.5">
-                            <Bed className="w-2.5 h-2.5" />
-                            {l.seatsAvailable} seats left
-                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewDetails?.(l);
+                            }}
+                            className="text-[9.5px] font-black uppercase text-primary hover:text-indigo-650 hover:underline cursor-pointer flex items-center gap-0.5"
+                          >
+                            Details ➔
+                          </button>
                         </div>
                       </div>
                     </motion.div>
