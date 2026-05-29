@@ -8,7 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import { deleteDoc, doc, collection, addDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { Listing, AccommodationType, GenderPreference } from '../types';
-import { KARACHI_AREAS, UNIVERSITIES } from '../constants';
+import { KARACHI_AREAS, UNIVERSITIES, formatPrice } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
 import ChatModal from './ChatModal';
 import PublicProfileModal from './PublicProfileModal';
@@ -43,6 +43,20 @@ interface SavedSearch {
     parkingOnly: boolean;
   };
 }
+
+const getListingImage = (l: Listing) => {
+  if (l.images && l.images.length > 0) return l.images[0];
+  if (l.imageUrl) return l.imageUrl;
+  const charSum = (l.title || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const fallbackImages = [
+    "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1598928506311-c55ded91a20c?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=600&q=80",
+    "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?auto=format&fit=crop&w=600&q=80"
+  ];
+  return fallbackImages[charSum % fallbackImages.length];
+};
 
 export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang, showSavedOnlyDefault }: DhondhoTabProps) {
   // Translate system text
@@ -130,6 +144,62 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
     gender: 'Any' as GenderPreference | 'Any',
     meals: 'Any',
   });
+
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Hero stats & interactive items state
+  const [statsData, setStatsData] = useState<{
+    totalListings: number;
+    totalUsers: number;
+    averageRating: number;
+    recentBooking: {
+      userName: string;
+      area: string;
+      avatarUrl: string;
+      price: number;
+    } | null;
+  } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  // Popup notifications
+  const [showPopup1, setShowPopup1] = useState(false);
+  const [showPopup2, setShowPopup2] = useState(false);
+
+  // Fetch Hero section stats
+  useEffect(() => {
+    let active = true;
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => {
+        if (active) {
+          setStatsData(data);
+          setStatsLoading(false);
+        }
+      })
+      .catch(err => {
+        console.error("Error loading stats:", err);
+        if (active) {
+          setStatsLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [listings]);
+
+  // Delayed trigger for notifications
+  useEffect(() => {
+    const timer1 = setTimeout(() => {
+      setShowPopup1(true);
+    }, 1500);
+    const timer2 = setTimeout(() => {
+      setShowPopup2(true);
+    }, 2800);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
 
   // 1.2 More Filters states
   const [moreFilters, setMoreFilters] = useState({
@@ -276,6 +346,17 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
       // 12. Show Saved listings constraint
       if (showSavedOnly && !savedRoomIds.includes(l.id)) return false;
 
+      // Hero search query match (case-insensitive on area, title, or university)
+      if (searchQuery) {
+        const queryLower = searchQuery.toLowerCase();
+        const areaOk = l.area && l.area.toLowerCase().includes(queryLower);
+        const titleOk = l.title && l.title.toLowerCase().includes(queryLower);
+        const uniOk = l.university && l.university.toLowerCase().includes(queryLower);
+        if (!areaOk && !titleOk && !uniOk) {
+          return false;
+        }
+      }
+
       const typeMatch = filters.type === 'Any' || l.type === filters.type;
       const areaMatch = filters.area === 'Any' || l.area === filters.area;
       const uniMatch = filters.university === 'Any' || l.university === filters.university;
@@ -292,7 +373,7 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
       return typeMatch && areaMatch && uniMatch && budgetMatch && genderMatch && mealsMatch && 
              furnishedMatch && wifiMatch && acMatch && bathMatch && parkingMatch;
     });
-  }, [decoratedListings, filters, moreFilters, showSavedOnly, savedRoomIds]);
+  }, [decoratedListings, filters, moreFilters, showSavedOnly, savedRoomIds, searchQuery]);
 
   // Sort filtered listings
   const sortedListings = React.useMemo(() => {
@@ -516,7 +597,7 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
         <div className="space-y-3">
           <div className="flex justify-between items-center px-1">
             <label className="text-[10px] font-bold text-primary dark:text-emerald-400 uppercase tracking-[0.15em]">{t.monthlyBudget}</label>
-            <span className="text-xs font-black text-primary dark:text-emerald-400 bg-primary/15 px-3 py-1 rounded-lg">Rs. {filters.budget.toLocaleString()}</span>
+            <span className="text-xs font-black text-primary dark:text-emerald-400 bg-primary/15 px-3 py-1 rounded-lg">Rs. {formatPrice(filters.budget)}</span>
           </div>
           <div className="px-1 pt-1">
             <input 
@@ -692,6 +773,266 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
 
   return (
     <div className="space-y-6">
+      {/* KamraFind Full-width Animated Hero Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative overflow-hidden bg-gradient-to-br from-emerald-50 via-neutral-50/90 to-emerald-50/60 dark:from-[#0B2519] dark:via-[#092217] dark:to-[#04150E] text-emerald-950 dark:text-white rounded-[2.5rem] px-6 py-10 md:p-12 border border-emerald-100 dark:border-emerald-900/30 shadow-xl dark:shadow-2xl mb-4"
+      >
+        {/* Animated Background Circles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <motion.div 
+            className="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-emerald-600/10 blur-3xl"
+            animate={{ rotate: [0, 360] }}
+            transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div 
+            className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-emerald-800/15 blur-3xl"
+            animate={{ rotate: [360, 0] }}
+            transition={{ duration: 45, repeat: Infinity, ease: "linear" }}
+          />
+        </div>
+
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          {/* Left Content Column */}
+          <div className="lg:col-span-7 space-y-5">
+            {/* Top Badge */}
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100/60 dark:bg-[#164D36] border border-emerald-200 dark:border-[#1E6044] text-[11px] font-bold text-emerald-800 dark:text-emerald-400 font-mono tracking-wider shadow-sm"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Karachi ka #1 Roommate Platform
+            </motion.div>
+
+            {/* Tagline / Headline */}
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight leading-tight"
+            >
+              Ghar se door, <br />
+              phir bhi <span className="text-[#F59E0B]">ghar jaisa feel</span>
+            </motion.h1>
+
+            {/* Subheading */}
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-emerald-800/80 dark:text-white/80 text-xs sm:text-sm leading-relaxed max-w-xl"
+            >
+              Karachi ke har area mein verified kamray aur safe roommates — students, professionals, aur families ke liye
+            </motion.p>
+
+            {/* Search Bar */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.6 }}
+              className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl p-1.5 shadow-xl flex items-center gap-2 border border-emerald-100 dark:border-emerald-950/20"
+            >
+              <div className="flex-1 flex items-center px-3 gap-2">
+                <Search className="w-4 h-4 text-emerald-700 shrink-0 animate-pulse" />
+                <input 
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Area dhoondo — DHA, Gulshan, Clifton..."
+                  className="w-full text-xs font-semibold text-[#0F3D2A] dark:text-white placeholder-emerald-900/40 dark:placeholder-slate-400 bg-transparent outline-none py-1.5"
+                />
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery('')}
+                    className="p-1 rounded-full text-emerald-900/40 dark:text-white/45 hover:bg-emerald-50 dark:hover:bg-slate-800 hover:text-[#0F3D2A] dark:hover:text-white"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+              <button 
+                onClick={() => {
+                  const itemsElement = document.getElementById("room-listings-section");
+                  if (itemsElement) {
+                    itemsElement.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="bg-[#0F3D2A] dark:bg-emerald-600 text-white hover:bg-emerald-950 dark:hover:bg-emerald-700 px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300 shadow-md shrink-0 flex items-center gap-1 hover:text-[#F59E0B]"
+              >
+                Dhoondo →
+              </button>
+            </motion.div>
+
+            {/* Trust Row */}
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-semibold text-emerald-900/90 dark:text-white/90 pt-1"
+            >
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 bg-emerald-500/20 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 font-bold" />
+                </div>
+                <span>{listings.length}+ Listings</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 bg-emerald-500/20 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 font-bold" />
+                </div>
+                <span>{decoratedListings.filter(l => l.verified).length}+ Verified Users</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 bg-emerald-500/20 border border-emerald-500/35 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 font-bold" />
+                </div>
+                <span>Free to Use</span>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Right Floating Cards & Stats Column */}
+          <div className="lg:col-span-5 flex flex-col gap-5 relative">
+            {/* Quick Stats Grid Overlay */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="grid grid-cols-3 gap-3 w-full"
+            >
+              {/* Stat 1 */}
+              <div className="bg-emerald-100/30 hover:bg-emerald-100/50 dark:bg-[#124b33]/40 dark:hover:bg-[#124b33]/60 transition-all border border-emerald-250/20 dark:border-[#1e6344]/30 backdrop-blur-md rounded-2xl p-2.5 text-center flex flex-col justify-center shadow-md dark:shadow-lg">
+                <span className="text-lg font-black text-[#F59E0B]">
+                  {statsLoading ? (
+                    <div className="w-10 h-5 bg-emerald-950/40 animate-pulse rounded mx-auto" />
+                  ) : (
+                    statsData?.totalListings || 0
+                  )}
+                </span>
+                <span className="text-[10px] text-emerald-800/80 dark:text-white/70 font-bold uppercase tracking-wider mt-1 leading-none">Active Listings</span>
+              </div>
+
+              {/* Stat 2 */}
+              <div className="bg-emerald-100/30 hover:bg-emerald-100/50 dark:bg-[#124b33]/40 dark:hover:bg-[#124b33]/60 transition-all border border-emerald-250/20 dark:border-[#1e6344]/30 backdrop-blur-md rounded-2xl p-2.5 text-center flex flex-col justify-center shadow-md dark:shadow-lg">
+                <span className="text-lg font-black text-[#F59E0B]">
+                  {statsLoading ? (
+                    <div className="w-10 h-5 bg-emerald-950/40 animate-pulse rounded mx-auto" />
+                  ) : (
+                    statsData?.totalUsers || 0
+                  )}
+                </span>
+                <span className="text-[10px] text-emerald-800/80 dark:text-white/70 font-bold uppercase tracking-wider mt-1 leading-none">Registered Users</span>
+              </div>
+
+              {/* Stat 3 */}
+              <div className="bg-emerald-100/30 hover:bg-emerald-100/50 dark:bg-[#124b33]/40 dark:hover:bg-[#124b33]/60 transition-all border border-emerald-250/20 dark:border-[#1e6344]/30 backdrop-blur-md rounded-2xl p-2.5 text-center flex flex-col justify-center shadow-md dark:shadow-lg">
+                <span className="text-lg font-black text-[#F59E0B] flex items-center justify-center gap-0.5">
+                  {statsLoading ? (
+                    <div className="w-10 h-5 bg-emerald-950/40 animate-pulse rounded mx-auto" />
+                  ) : (
+                    <>
+                      {statsData?.averageRating || 4.7}
+                      <span className="text-xs text-[#F59E0B]">★</span>
+                    </>
+                  )}
+                </span>
+                <span className="text-[10px] text-emerald-800/80 dark:text-white/70 font-bold uppercase tracking-wider mt-1 leading-none">Average rating</span>
+              </div>
+            </motion.div>
+
+            {/* 2 Most Recent Listings Floating Stack/Grid */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold tracking-widest text-[#F59E0B] uppercase">Newly Added</span>
+              
+              {decoratedListings.length === 0 ? (
+                /* Empty state card */
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-emerald-50 border border-emerald-100 text-emerald-800/60 dark:bg-[#124b33]/20 dark:border-[#1e6344]/30 rounded-2xl p-6 text-center dark:text-white/50 text-xs font-semibold"
+                >
+                  Naye listings jald hi aayenge!
+                </motion.div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                  {decoratedListings.slice(0, 2).map((l, index) => {
+                    const priceFormatted = formatPrice(l.rent);
+                    const listingImg = getListingImage(l);
+                    return (
+                      <motion.div
+                        key={`hero-recent-${l.id || ''}-${index}`}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ 
+                          opacity: 1, 
+                          x: 0,
+                          y: [0, -8, 0] 
+                        }}
+                        transition={{
+                          delay: 0.5 + index * 0.15,
+                          y: {
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: index * 0.75
+                          },
+                          opacity: { duration: 0.4 },
+                          x: { duration: 0.4 }
+                        }}
+                        onClick={() => setSelectedDetailedListing(l)}
+                        className="bg-white/90 hover:bg-white dark:bg-white/10 dark:hover:bg-white/15 transition-all outline-none border border-emerald-100 dark:border-white/10 rounded-2xl p-2.5 flex gap-3 cursor-pointer select-none shadow-sm dark:shadow-none"
+                      >
+                        {/* Little Photo Aspect */}
+                        <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 relative">
+                          <img 
+                            src={listingImg} 
+                            alt={l.title} 
+                            referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-1 left-1 bg-emerald-600 border border-emerald-500/20 text-white rounded px-1.5 py-0.5 text-[8px] font-black tracking-wide uppercase">
+                            {l.type === 'Sharing Flat' ? 'Flat' : l.type === 'Hostel' ? 'Hostel' : 'Room'}
+                          </div>
+                        </div>
+
+                        {/* Text and Price values */}
+                        <div className="flex-1 flex flex-col justify-between overflow-hidden">
+                          <div className="flex items-center justify-between gap-1">
+                            <h4 className="text-xs font-black truncate max-w-[125px] text-emerald-950 dark:text-white/95">{l.title}</h4>
+                            <div className="flex items-center gap-0.5 text-[#F59E0B] text-xs shrink-0">
+                              <span>★</span>
+                              <span className="font-bold">{l.rating || 4.5}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-1 text-[10px] text-emerald-800/70 dark:text-white/70 mt-0.5">
+                            <MapPin className="w-3 h-3 text-[#F59E0B] shrink-0" />
+                            <span className="truncate">{l.area}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] mt-1 pr-1">
+                            <span className="text-[10px] text-emerald-800/60 dark:text-white/60 font-medium">Monthly Rent</span>
+                            <span className="font-extrabold text-[#F59E0B]">PKR {priceFormatted}</span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
+      <div id="room-listings-section" />
+
       {/* 12. Dismissible Auto-Rotating Awareness Alert */}
       {isBannerVisible && (
         <motion.div 
@@ -844,9 +1185,9 @@ export default function DhondhoTab({ listings, onAskAi, onLoginClick, user, lang
         /* Grid list */
         sortedListings.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-12">
-            {sortedListings.map((listing) => (
+            {sortedListings.map((listing, listingIdx) => (
               <ListingCard 
-                key={listing.id} 
+                key={`listing-grid-${listing.id || ''}-${listingIdx}`} 
                 listing={listing} 
                 onAskAi={() => onAskAi(listing)} 
                 onContact={() => handleContact(listing)}
@@ -1398,7 +1739,7 @@ const ListingCard: React.FC<DecoratedListingProps> = ({
         {/* Price Tag Overlay Badge (prominently shown on image) */}
         <div className="absolute bottom-3 left-3 z-10">
           <span className="px-3 py-1.5 bg-primary dark:bg-emerald-600 text-white rounded-xl text-xs font-black shadow-lg">
-            Rs. {listing.rent.toLocaleString()}/m
+            Rs. {formatPrice(listing.rent)}/m
           </span>
         </div>
 
@@ -1549,7 +1890,7 @@ const ListingCard: React.FC<DecoratedListingProps> = ({
                           },
                           {
                             title: lang === 'EN' ? 'Rent vs Budget' : 'Kiraya Budget Limit',
-                            val: `Rs. ${listing.rent.toLocaleString()}`,
+                            val: `Rs. ${formatPrice(listing.rent)}`,
                             match: !filters || listing.rent <= filters.budget
                           }
                         ].map((b, bIdx) => (

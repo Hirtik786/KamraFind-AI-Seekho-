@@ -449,3 +449,19 @@ Questions to suggest students ask landlord:
 After understanding needs, output a JSON block at the end:
 FILTERS_JSON:
 {type, area, maxBudget, university, gender, meals}`;
+
+export const formatPrice = (p: number | string | undefined | null): string => {
+  if (p === undefined || p === null) return '0';
+  const num = Number(p);
+  if (isNaN(num)) return '0';
+  if (num >= 1e12) {
+    return `${(num / 1e12).toFixed(1).replace(/\.0$/, '')}T`;
+  }
+  if (num >= 1e9) {
+    return `${(num / 1e9).toFixed(1).replace(/\.0$/, '')}B`;
+  }
+  if (num >= 1e6) {
+    return `${(num / 1e6).toFixed(1).replace(/\.0$/, '')}M`;
+  }
+  return num.toLocaleString();
+};

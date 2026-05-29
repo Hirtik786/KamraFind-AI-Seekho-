@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { MessageSquare, User, MapPin, ChevronRight, Clock } from 'lucide-react';
 import ChatModal from './ChatModal';
 import PublicProfileModal from './PublicProfileModal';
@@ -39,8 +39,16 @@ export default function MessagesTab() {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const convs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
-      setConversations(convs);
+      const allConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
+      const validConvs = allConvs.filter(c => {
+        const parts = c.id.split('_');
+        if (parts.length !== 2) {
+          console.warn("Found malformed conversation ID format, filtering locally:", c.id);
+          return false;
+        }
+        return true;
+      });
+      setConversations(validConvs);
       setLoading(false);
     }, (err) => {
       console.error("Inbox error:", err);

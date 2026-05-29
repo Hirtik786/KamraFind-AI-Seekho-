@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Listing, ChatMessage } from '../types';
-import { SYSTEM_PROMPT } from '../constants';
+import { SYSTEM_PROMPT, formatPrice } from '../constants';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Bot, User, Sparkles, MapPin, School, Banknote, AlertCircle, Trash2, X, Languages } from 'lucide-react';
 
@@ -334,7 +334,7 @@ export default function AIAssistantTab({ listings, contextListing, onClearContex
                       <div className="grid grid-cols-1 gap-2.5">
                         {m.listings.map((l, lIdx) => (
                           <motion.div 
-                            key={l.id} 
+                            key={`ai-rec-${idx}-${l.id || lIdx}-${lIdx}`} 
                             initial={{ opacity: 0, x: -15 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: lIdx * 0.1, type: 'spring', damping: 15 }}
@@ -347,7 +347,7 @@ export default function AIAssistantTab({ listings, contextListing, onClearContex
                             <div className="flex-1 min-w-0">
                               <h4 className="font-extrabold text-xs truncate text-gray-900">{l.title}</h4>
                               <p className="text-[10px] text-gray-400 font-bold truncate">{l.area} · {l.university}</p>
-                              <p className="text-xs font-black text-primary font-mono">Rs. {l.rent.toLocaleString()}</p>
+                              <p className="text-xs font-black text-primary font-mono">Rs. {formatPrice(l.rent)}</p>
                             </div>
                           </motion.div>
                         ))}

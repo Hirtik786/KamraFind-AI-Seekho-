@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { MapPin, Eye, GraduationCap, ArrowUpRight } from 'lucide-react';
 import { Listing } from '../types';
+import { formatPrice } from '../constants';
 
 interface RecentlyViewedProps {
   listings: Listing[];
@@ -15,11 +16,11 @@ export default function RecentlyViewed({ listings, onSelect, lang }: RecentlyVie
   const t = {
     EN: {
       title: "Recently Visited Rooms",
-      sub: "Aapne Haal Mein Dekha",
+      sub: "",
       rent: "Rs."
     },
     UR: {
-      title: "Recently Visited Rooms (Aapne Haal Mein Dekha)",
+      title: "Aapne Haali Mein Dekha",
       sub: "Wapis jald check karne ke liye click karen",
       rent: "Rs."
     }
@@ -30,15 +31,15 @@ export default function RecentlyViewed({ listings, onSelect, lang }: RecentlyVie
       <div className="flex items-center gap-2 px-1">
         <Eye className="w-4 h-4 text-primary animate-pulse" />
         <h3 className="text-xs font-black uppercase tracking-widest text-primary">
-          {t.title} <span className="text-gray-400 font-medium normal-case">- {t.sub}</span>
+          {t.title} {t.sub && <span className="text-gray-400 font-medium normal-case">- {t.sub}</span>}
         </h3>
       </div>
       
       {/* Horizontal Scroll Layout */}
       <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none px-1">
-        {listings.map((l) => (
+        {listings.map((l, idx) => (
           <motion.div
-            key={l.id}
+            key={`recent-view-${l.id || ''}-${idx}`}
             onClick={() => onSelect(l)}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
@@ -63,7 +64,7 @@ export default function RecentlyViewed({ listings, onSelect, lang }: RecentlyVie
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-xs font-extrabold text-primary dark:text-emerald-400">
-                  {t.rent} {l.rent.toLocaleString()}
+                  {t.rent} {formatPrice(l.rent)}
                 </span>
                 <span className="text-[9px] text-gray-400 font-bold uppercase">{l.gender}</span>
               </div>

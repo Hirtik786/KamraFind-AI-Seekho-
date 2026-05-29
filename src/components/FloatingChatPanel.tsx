@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db } from '../firebase';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, setDoc, doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { MessageSquare, User, MapPin, ChevronRight, Clock, Send, MessageCircle, ArrowLeft, Trash2, X, Sparkles, Phone } from 'lucide-react';
 import { Listing } from '../types';
 
@@ -67,8 +67,16 @@ export default function FloatingChatPanel({ onClose, onViewProfile }: FloatingCh
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const convs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
-      setConversations(convs);
+      const allConvs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Conversation));
+      const validConvs = allConvs.filter(c => {
+        const parts = c.id.split('_');
+        if (parts.length !== 2) {
+          console.warn("Found malformed floating conversation ID format, filtering locally:", c.id);
+          return false;
+        }
+        return true;
+      });
+      setConversations(validConvs);
       setLoadingConvs(false);
     }, (err) => {
       console.error("Floating Inbox load error:", err);

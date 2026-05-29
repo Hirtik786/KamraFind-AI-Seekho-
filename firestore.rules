@@ -74,7 +74,7 @@ service cloud.firestore {
     }
 
     match /conversations/{conversationId} {
-      allow read: if isSignedIn() && (request.auth.uid in resource.data.participants);
+      allow read, delete: if isSignedIn() && (request.auth.uid in resource.data.participants);
       allow create, update: if isSignedIn() 
         && (request.auth.uid in incoming().participants)
         && incoming().lastMessage is string;

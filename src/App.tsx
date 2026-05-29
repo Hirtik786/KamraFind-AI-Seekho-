@@ -77,6 +77,34 @@ export default function App() {
     return `${days}d ago`;
   };
 
+  const playChime = () => {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      gain1.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.45);
+      
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.frequency.setValueAtTime(880, audioCtx.currentTime + 0.08); // A5
+      gain2.gain.setValueAtTime(0.08, audioCtx.currentTime + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+      
+      osc1.start();
+      osc2.start(audioCtx.currentTime + 0.08);
+      osc1.stop(audioCtx.currentTime + 0.5);
+      osc2.stop(audioCtx.currentTime + 0.75);
+    } catch (e) {
+      console.warn("Audio chime blocked by browser autoplay policy or not supported:", e);
+    }
+  };
+
   // Real-time Firestore notification subscription
   useEffect(() => {
     if (!user) {
@@ -98,6 +126,8 @@ export default function App() {
       collection(db, 'notifications'),
       where('userId', '==', user.uid)
     );
+
+    let isFirst = true;
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let list = snapshot.docs.map(docSnap => ({
@@ -125,13 +155,30 @@ export default function App() {
         return;
       }
 
+      // Check for incoming notifications if not first load
+      if (!isFirst) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const data = change.doc.data();
+            if (data && !data.read) {
+              const msg = lang === 'EN'
+                ? `${data.titleEn}: ${data.textEn}`
+                : `${data.titleUr}: ${data.textUr}`;
+              setToast({ message: msg, type: 'success' });
+              playChime();
+            }
+          }
+        });
+      }
+      isFirst = false;
+
       setNotifications(list);
     }, (err) => {
       console.error("Notifications real-time error:", err);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user, lang]);
 
   const toggleLanguage = () => {
     const next = lang === 'EN' ? 'UR' : 'EN';
@@ -162,6 +209,8 @@ export default function App() {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const incomingConvs = snapshot.docs.filter(docSnap => {
+        const parts = docSnap.id.split('_');
+        if (parts.length !== 2) return false;
         const data = docSnap.data();
         return data.lastSenderId !== user.uid;
       });
@@ -401,9 +450,9 @@ export default function App() {
                         {lang === 'EN' ? 'No recent notifications' : 'Koi nayi ittela nahi hai'}
                       </div>
                     ) : (
-                      notifications.map((n) => (
+                      notifications.map((n, idx) => (
                         <div 
-                          key={n.id} 
+                          key={`notify-dropdown-${n.id || ''}-${idx}`} 
                           onClick={() => handleNotificationClick(n.id)}
                           className={`relative py-3.5 flex flex-col gap-1 transition-all rounded-xl cursor-pointer group px-2.5 mb-1 ${!n.read ? 'bg-primary/5 border-l-2 border-primary font-semibold' : 'hover:bg-slate-50 dark:hover:bg-slate-850'}`}
                           style={{ background: !n.read ? (theme === 'dark' ? 'rgba(26,107,58,0.15)' : 'rgba(26,107,58,0.05)') : '' }}
@@ -550,9 +599,9 @@ export default function App() {
                         {lang === 'EN' ? 'No recent notifications' : 'Koi nayi ittela nahi hai'}
                       </div>
                     ) : (
-                      notifications.map((n) => (
+                      notifications.map((n, idx) => (
                         <div 
-                          key={n.id} 
+                          key={`notify-mobile-${n.id || ''}-${idx}`} 
                           onClick={() => handleNotificationClick(n.id)}
                           className={`relative py-3.5 flex flex-col gap-1 transition-all rounded-xl cursor-pointer group px-2.5 mb-0.5 ${!n.read ? 'bg-primary/5 border-l-2 border-primary font-semibold' : 'hover:bg-slate-50 dark:hover:bg-slate-850'}`}
                           style={{ background: !n.read ? (theme === 'dark' ? 'rgba(26,107,58,0.15)' : 'rgba(26,107,58,0.05)') : '' }}

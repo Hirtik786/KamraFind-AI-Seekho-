@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, Landmark, MapPin, BadgeCheck, Users, Bed, CreditCard, Wind, Wifi, Coffee, Car } from 'lucide-react';
 import { Listing } from '../types';
+import { formatPrice } from '../constants';
 
 interface CompareModalProps {
   isOpen: boolean;
@@ -136,7 +137,7 @@ export default function CompareModal({ isOpen, onClose, listings, onContact, lan
                     </td>
                     {listings.map((l) => (
                       <td key={l.id} className="py-4 px-4">
-                        <span className="font-black text-lg text-primary dark:text-emerald-400">Rs. {l.rent.toLocaleString()}</span>
+                        <span className="font-black text-lg text-primary dark:text-emerald-400">Rs. {formatPrice(l.rent)}</span>
                         <span className="text-[10px] text-slate-400">/m</span>
                       </td>
                     ))}
@@ -150,7 +151,7 @@ export default function CompareModal({ isOpen, onClose, listings, onContact, lan
                     </td>
                     {listings.map((l) => (
                       <td key={l.id} className="py-4 px-4 font-bold text-gray-800 dark:text-white">
-                        Rs. {l.securityDeposit.toLocaleString()}
+                        Rs. {formatPrice(l.securityDeposit)}
                       </td>
                     ))}
                   </tr>

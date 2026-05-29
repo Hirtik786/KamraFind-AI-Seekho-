@@ -47,7 +47,7 @@ export default function ChatModal({ isOpen, onClose, receiverId, receiverName, l
   useEffect(() => {
     if (!user || !isOpen) return;
 
-    const convId = [user.uid, receiverId, listing.id].sort().join('_');
+    const convId = [user.uid, receiverId].sort().join('_');
 
     const q = query(
       collection(db, 'messages'),
@@ -131,7 +131,7 @@ export default function ChatModal({ isOpen, onClose, receiverId, receiverName, l
     const text = inputText.trim();
     setInputText('');
 
-    const convId = [user.uid, receiverId, listing.id].sort().join('_');
+    const convId = [user.uid, receiverId].sort().join('_');
 
     try {
       // 1. Add Message

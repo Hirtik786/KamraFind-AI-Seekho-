@@ -6,6 +6,7 @@ import {
   Wifi, Bath, Car, Info, Star, ChevronLeft, ChevronRight, Phone, CheckCircle, Trash2 
 } from 'lucide-react';
 import { Listing, AccommodationType, GenderPreference } from '../types';
+import { formatPrice } from '../constants';
 
 interface ListingDetailModalProps {
   isOpen: boolean;
@@ -304,13 +305,13 @@ export default function ListingDetailModal({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div className="bg-gray-50 dark:bg-slate-850 p-4 rounded-2xl border border-gray-150/10">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{t.rent}</p>
-                      <p className="text-lg font-black text-primary dark:text-emerald-400 mt-2 font-mono">Rs. {listing.rent.toLocaleString()}</p>
+                      <p className="text-lg font-black text-primary dark:text-emerald-400 mt-2 font-mono">Rs. {formatPrice(listing.rent)}</p>
                       <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mt-1">per month</p>
                     </div>
 
                     <div className="bg-gray-50 dark:bg-slate-850 p-4 rounded-2xl border border-gray-150/10">
                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">{t.deposit}</p>
-                      <p className="text-lg font-black text-gray-800 dark:text-white mt-2 font-mono">Rs. {listing.securityDeposit?.toLocaleString() || '0'}</p>
+                      <p className="text-lg font-black text-gray-800 dark:text-white mt-2 font-mono">Rs. {formatPrice(listing.securityDeposit)}</p>
                       <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider mt-1">refundable</p>
                     </div>
 
